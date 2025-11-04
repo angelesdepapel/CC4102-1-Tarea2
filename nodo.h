@@ -10,6 +10,8 @@ using namespace std;
  */
 const int sigma = 27;
 
+
+// Estructura de datos que representa un nodo
 struct Nodo{
     Nodo* parent;
     std::array<Nodo*, sigma> next;
