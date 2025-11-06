@@ -5,13 +5,14 @@
 #include <chrono>
 #include <iomanip>
 #include <string>
+#include <filesystem>
 
 using namespace std;
 using namespace chrono;
 
 /** Lee un archivo, palabra por palabra.
  * Retorna un vector con las palabras leídas en el archivo. */
-vector<string> leer_archivo(const string& filename) {
+vector<string> leerArchivo(const string& filename) {
   vector<string> palabras;
   ifstream f(filename);
   string palabra;
@@ -20,114 +21,117 @@ vector<string> leer_archivo(const string& filename) {
   return palabras;
 }
 
-/** Cuenta todos los caracteres de un vector de palabras, hasta el límite designado. */
-long long contar_caracteres(const vector<string>& palabras, int hasta) {
+/** Cuenta todos los caracteres de un vector de palabras, hasta el límite designado.
+ * Retorna un long long con la cantidad total de caracteres del vector hasta el límite. */
+long long contarCaracteres(const vector<string>& palabras, int hasta) {
   long long total = 0;
   for (int i = 0; i < hasta; i++) total += palabras[i].length();
   return total;
 }
 
+/** Arreglo de archivos del dataset a procesar */
+array<string, 4> archivos = {"words", "wikipedia", "random", "random_with_distribution"};
+
 int main(int argc, char* argv[]) {
   for (int i = 0; i < 4; i++) {
-    string words_file;
-    if(i == 0) words_file = "words.txt";
-    else if(i == 1) words_file = "wikipedia.txt";
-    else if(i == 2) words_file = "random.txt";
-    else if(i == 3) words_file = "random_with_distribution.txt";
-    auto palabras = leer_archivo(words_file);
+    string archivo = archivos[i] + ".txt";
+    auto palabras = leerArchivo("datasets/" + archivo);
     int N = palabras.size();
 
     cout << "====================================" << endl;
     cout << " EXPERIMENTO TRIES" << endl;
     cout << "====================================" << endl;
-    cout << " Archivo de palabras a procesar: " << words_file << endl;
-    cout << "====================================" << endl;
-    cout << "Leyendo dataset..." << flush;
+    cout << " Archivo de palabras a procesar: " << archivo << endl;
+    cout << " Leyendo dataset..." << flush;
     cout << " OK (" << N << " palabras)" << endl;
+
+    filesystem::path current = filesystem::current_path();
+    filesystem::create_directories(archivos[i]);
 
     cout << "\n====================================" << endl;
     cout << " Experimento 1: Consumo de memoria" << endl;
     cout << "====================================" << endl;
 
-    ofstream csv_memoria(std::string(words_file + "Memoria.csv"));
-    csv_memoria << "NumPalabras,NumNodos,NumCaracteres,NodosPorCaracter\n";
+    ofstream csvMemoria(string(archivos[i] + "/Memoria.csv"));
+    csvMemoria << "NumPalabras,NumNodos,NumCaracteres,NodosPorCaracter\n";
 
     Trie trie;
-    vector<int> puntos_medicion;
-    for (int exp = 0; exp <= 17; exp++) puntos_medicion.push_back(1 << exp);
-    puntos_medicion.push_back(N);
-    int id_medicion = 0;
+    vector<int> puntosMedicion;
+    for (int exp = 0; exp <= 17; exp++) puntosMedicion.push_back(1 << exp);
+    puntosMedicion.push_back(N);
+    int indiceMedicion = 0;
 
     cout << "Insertando palabras y midiendo memoria..." << endl;
     for (int i = 0; i < N; i++) {
       trie.insert(palabras[i]);
 
-      if (id_medicion < (int)puntos_medicion.size() && i + 1 == puntos_medicion[id_medicion]) {
-        long long total_chars = contar_caracteres(palabras, i + 1);
-        double nodos_por_char = (double)trie.getCantidadNodos() / total_chars;
+      if (indiceMedicion < (int)puntosMedicion.size() && i + 1 == puntosMedicion[indiceMedicion]) {
+        long long totalChars = contarCaracteres(palabras, i + 1);
+        double nodosPorChar = (double)trie.getCantidadNodos() / totalChars;
 
-        csv_memoria << (i + 1) << "," << trie.getCantidadNodos() << ","
-                << total_chars << "," << nodos_por_char << "\n";
+        csvMemoria << (i + 1) << "," << trie.getCantidadNodos() << ","
+          << totalChars << "," << nodosPorChar << "\n";
 
-        cout << "  N = 2^" << id_medicion << " (" << (i+1) << " palabras): "
-            << trie.getCantidadNodos() << " nodos, "
-            << fixed << setprecision(4) << nodos_por_char << " nodos/char" << endl;
+        cout << "  N = 2^" << indiceMedicion << " (" << (i+1) << " palabras): "
+          << trie.getCantidadNodos() << " nodos, "
+          << fixed << setprecision(4) << nodosPorChar << " nodos/char" << endl;
 
-        id_medicion++;
+        indiceMedicion++;
       }
     }
-    csv_memoria.close();
-    cout << "OK - Resultados guardados en memoria.csv" << endl;
+    csvMemoria.close();
+    cout << "\nOK - Resultados guardados en: " << archivos[i] << "/Memoria.csv" << endl;
+
 
 
     cout << "\n====================================" << endl;
     cout << " Experimento 2: Tiempo de inserción" << endl;
     cout << "====================================" << endl;
 
-    ofstream csv_tiempo(std::string(words_file + "Tiempo.csv"));
-    csv_tiempo << "NumPalabras,TiempoGrupo,CaracteresGrupo,TiempoPorCaracter\n";
+    ofstream csvTiempo(string(archivos[i] + "/Tiempo.csv"));
+    csvTiempo << "NumPalabras,TiempoGrupo,CaracteresGrupo,TiempoPorCaracter\n";
 
     Trie trie2;
 
     int M = 16;
-    int grupo_size = N / M;
+    int grupoSize = N / M;
 
     cout << "Insertando " << N << " palabras en " << M << " grupos..." << endl;
-    cout << "Tamaño de cada grupo: " << grupo_size << " palabras" << endl << endl;
+    cout << "Tamaño de cada grupo: " << grupoSize << " palabras" << endl << endl;
 
-    auto inicio_grupo = high_resolution_clock::now();
-    long long chars_grupo = 0;
+    auto inicioGrupo = high_resolution_clock::now();
+    long long charsGrupo = 0;
 
     for (int i = 0; i < N; i++) {
       trie2.insert(palabras[i]);
-      chars_grupo += palabras[i].length();
+      charsGrupo += palabras[i].length();
 
-      if ((i + 1) % grupo_size == 0 || i + 1 == N) {
-        auto fin_grupo = high_resolution_clock::now();
-        duration<double> tiempo_grupo = fin_grupo - inicio_grupo;
-        double tiempo_por_char = tiempo_grupo.count() / chars_grupo;
+      if ((i + 1) % grupoSize == 0 || i + 1 == N) {
+        auto finGrupo = high_resolution_clock::now();
+        duration<double> tiempoGrupo = finGrupo - inicioGrupo;
+        double tiempoPorChar = tiempoGrupo.count() / charsGrupo;
 
-        csv_tiempo << (i + 1) << "," << tiempo_grupo.count() << ","
-                << chars_grupo << "," << tiempo_por_char << "\n";
+        csvTiempo << (i + 1) << "," << tiempoGrupo.count() << ","
+          << charsGrupo << "," << tiempoPorChar << "\n";
 
-        int grupo_num = (i + 1) / grupo_size;
-        if ((i + 1) % grupo_size != 0) grupo_num++;
+        int grupoNum = (i + 1) / grupoSize;
+        if ((i + 1) % grupoSize != 0) grupoNum++;
 
-        cout << "  Grupo " << grupo_num << " (palabras " << (i + 1 - chars_grupo/6) << "-" << (i+1) << "): "
-            << fixed << setprecision(6) << tiempo_grupo.count() << " s, "
-            << tiempo_por_char << " s/char" << endl;
+        cout << "  Grupo " << grupoNum << " (palabras " << (i + 1 - charsGrupo/6)
+          << "-" << (i+1) << "): " << fixed << setprecision(6) << tiempoGrupo.count()
+          << " s, " << tiempoPorChar << " s/char" << endl;
 
-        inicio_grupo = high_resolution_clock::now();
-        chars_grupo = 0;
+        inicioGrupo = high_resolution_clock::now();
+        charsGrupo = 0;
       }
     }
 
-    csv_tiempo.close();
-    cout << "\nOK - Resultados guardados en tiempo_insercion.csv" << endl;
+    csvTiempo.close();
+    cout << "\nOK - Resultados guardados en " << archivos[i] << "/Tiempo.csv" << endl;
 
     cout << "\n====================================" << endl;
-    cout << " EXPERIMENTO COMPLETADO" << endl;
-    cout << "======================================" << endl;
+    cout << " EXPERIMENTOS COMPLETADOS PARA " << archivo << endl;
+    cout << "====================================\n" << endl;
   }
   return 0;
 }

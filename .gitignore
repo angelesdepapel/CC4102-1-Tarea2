@@ -1,0 +1,7 @@
+*.exe
+main
+
+/random
+/random_with_distribution
+/wikipedia
+/words
