@@ -1,172 +1,127 @@
 #pragma once
-#include "nodo.h"
-#include <string>
 #include <vector>
+#include <string>
+#include "nodo.h"
 
-//Tipos de prioridad
-enum class Prioridad{
-    TIEMPO,
-    ACCESOS
+using namespace std;
+
+/** Tipos de prioridad */
+enum class Prioridad {
+  TIEMPO, ACCESOS
 };
 
-//Clase que representa un trie
-class Trie{
+class Trie {
 private:
-    Nodo* raiz;
-    Prioridad prio;
-    long long cantidad_accesos;
-    int cantidad_nodos;
-    std::vector<Nodo*> nodos;
+  Nodo* raiz;
+  Prioridad prioridad;
+  long long cantidadAccesos;
+  int cantidadNodos;
+  vector<Nodo*> nodos;
 
+  /** Dado un carácter, retorna su índice correspondiente en el arreglo next. */
+  int getIndex(char c) {
+    if (c == '$') return 26;
+    else return c - 'a';
+  }
 
-    /** Dado un caracter
-     * retorna su índice correspondiente en el arreglo next
-     */
-    int getIndex(char c){
-        if(c == '$') return 26;
-        else return c - 'a';
+  /** Dado un índice del arreglo next, retorna su carácter correspondiente. */
+  char getChar(int i) {
+    if (i == 26) return '$';
+    else return 'a' + i;
+  }
+
+  /** Dado un nodo, actualiza su bestTerminal y bestPriority
+   * recursivamente hacia arriba, hasta llegar a la raíz del árbol. */
+  void update(Nodo* v) {
+    Nodo* actual = v->parent;
+    long long nuevaPrioridad = v->priority;
+
+    while (actual != nullptr) {
+      if (actual->bestPriority < nuevaPrioridad) {
+        actual->bestPriority = nuevaPrioridad;
+        actual->bestTerminal = v;
+        actual = actual->parent;
+      } else break;
+    }
+  }
+
+  public:
+    Trie(Prioridad p = Prioridad::TIEMPO): prioridad(p), cantidadAccesos(0), cantidadNodos(0) {
+      raiz = new Nodo();
+      cantidadNodos++;
+      nodos.push_back(raiz);
     }
 
+    /** Inserta la palabra w carácter por carácter. creando nodos cuando
+     * sea necesario. Al finalizar la palabra, agrega el nodo terminal. */
+    void insert(const string& w) {
+      Nodo* actual = raiz;
 
-    /** Dado un índice del arreglo next
-     * retorna su caracter correspondiente
-     */
-    char getChar(int i){
-        if(i == 26) return '$';
-        else return 'a' + i;
+      for (char c : w) {
+        int index = getIndex(c);
+
+        if (actual->next[index] == nullptr) {
+          Nodo* nuevo = new Nodo();
+          actual->next[index] = nuevo;
+          cantidadNodos++;
+          nodos.push_back(nuevo);
+        }
+
+        actual = actual->next[index];
+      }
+
+      int lastIndex = sigma - 1;
+      if (actual->next[lastIndex] == nullptr) {
+        Nodo* terminal = new Nodo();
+        terminal->parent = actual;
+        terminal->priority = 0;
+        terminal->str = new string(w + "$");
+        terminal->bestTerminal = terminal;
+        terminal->bestPriority = 0;
+
+        actual->next[lastIndex] = terminal;
+        cantidadNodos++;
+        nodos.push_back(terminal);
+
+        if (actual->bestTerminal == nullptr || actual->bestPriority < 0) {
+          actual->bestTerminal = terminal;
+          actual->bestPriority = 0;
+          update(terminal);
+        }
+      }
     }
 
-
-    /** Dado un nodo, actualiza best_terminal y best_priority
-     * recursivamente hacia arriba, hasta llegar a la raiz
-     */
-    void update(Nodo* v){
-        Nodo* actual = v->parent;
-        long long newPriority = v->priority;
-        Nodo* newTerminal = v;
-
-        while(actual != nullptr){
-            if(actual->best_priority < newPriority){
-                actual->best_priority = newPriority;
-                actual->best_terminal = newTerminal;
-                actual = actual->parent;
-            }else{
-                break;
-            }
-        }
+    /** Dado un puntero a un nodo, retorna el puntero resultante
+     * de descender por el carácter c. */
+    Nodo* descend(Nodo* v, char c) {
+      if (v == nullptr) return nullptr;
+      int index = getIndex(c);
+      return v->next[index];
     }
 
-    public:
-        /** Constructor del trie
-         */
-        Trie(Prioridad tipo = Prioridad::TIEMPO): prio(tipo), cantidad_accesos(0), cantidad_nodos(0){
-            raiz = new Nodo();
-            raiz->parent = nullptr;
-            raiz->priority = -1;
-            raiz->str = nullptr;
-            raiz->best_terminal = nullptr;
-            raiz->best_priority = -1;
+    /** Dado un sub árbol, retorna un puntero a su mejor autocompletado. */
+    Nodo* autocomplete(Nodo* v) {
+      if (v == nullptr) return nullptr;
+      return v->bestTerminal;
+    }
 
-            for(int i = 0; i<sigma; i++){
-                raiz->next[i] = nullptr;
-            }
+    /** Actualiza la prioridad del nodo terminal v según la variante
+     * y actualiza los nodos en el camino a la raíz. Esto último se realiza
+     * mediante la función auxiliar update. */
+    void update_priority(Nodo* v) {
+      if (v == nullptr) return;
+      if (prioridad == Prioridad::ACCESOS) {
+        v->priority++;
+        v->bestPriority = v->priority;
+      } else {
+        cantidadAccesos++;
+        v->priority = cantidadAccesos;
+        v->bestPriority = cantidadAccesos;
+      }
+      update(v);
+    }
 
-            cantidad_nodos++;
-            nodos.push_back(raiz);
-        }
-
-
-        /** Inserta una nueva palabra en el trie
-         */
-        void insert(const std::string& w){
-            Nodo* actual = raiz;
-
-            // Insertamos la palabra caracter a caracter
-            for(char c : w){
-                int id = getIndex(c);
-
-                if(actual->next[id] == nullptr){
-                    Nodo* nuevo = new Nodo();
-                    nuevo->parent = actual;
-                    nuevo->priority = -1;
-                    nuevo->str = nullptr;
-                    nuevo->best_terminal = nullptr;
-                    nuevo->best_priority = -1;
-
-                    for(int i = 0; i < sigma; i++){
-                        nuevo->next[i] = nullptr;
-                    }
-
-                    actual->next[id] = nuevo;
-                    cantidad_nodos++;
-                    nodos.push_back(nuevo);
-                }
-                actual = actual->next[id];
-            }
-
-            // Insertamos el caracter especial al final
-            int id = 26; //índice de '$'
-            if(actual->next[id] == nullptr){
-                Nodo* terminal = new Nodo();
-                terminal->parent = actual;
-                terminal->priority = 0;
-                terminal->str = new std::string(w + "$");
-                terminal->best_terminal = terminal;
-                terminal->best_priority = 0;
-
-                for(int i = 0; i < sigma; i++){
-                    terminal->next[id] = nullptr;
-                }
-
-                actual->next[id] = terminal;
-                cantidad_nodos++;
-                nodos.push_back(terminal);
-
-                if(actual->best_terminal == nullptr || actual->best_priority < 0){
-                    actual->best_terminal = terminal;
-                    actual->best_priority = 0;
-                    update(terminal);
-                }
-            }
-        }
-
-
-        /** Dado un puntero a un nodo,
-         * retorna el puntero resultante de descender por el caracter c.
-         */
-        Nodo* descend(Nodo* v, char c){
-            if(v == nullptr) return nullptr;
-            int id = getIndex(c);
-            return v->next[id];
-        }
-
-        
-        /** Dado un subarbol,
-         * retorna un puntero a su mejor autocompletado.
-         */
-        Nodo* autocomplete(Nodo* v){
-            if(v == nullptr) return nullptr;
-            return v->best_terminal;
-        }
-
-
-        void update_priority(Nodo* v){
-            if(v == nullptr) return;
-            
-            if(prio == Prioridad::ACCESOS){
-                v->priority++;
-                v->best_priority = v->priority;
-            }else if(prio == Prioridad::TIEMPO){
-                cantidad_accesos++;
-                v->priority = cantidad_accesos;
-                v->best_priority = cantidad_accesos;
-            }
-
-            update(v);
-        }
-
-
-        int get_cantidad_nodos() const{
-            return cantidad_nodos;
-        }
+    const int getCantidadNodos() {
+      return cantidadNodos;
+    }
 };
