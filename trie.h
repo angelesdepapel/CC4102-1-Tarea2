@@ -16,7 +16,7 @@ private:
   Prioridad prioridad;
   long long cantidadAccesos;
   int cantidadNodos;
-  vector<Nodo*> nodos;
+  //vector<Nodo*> nodos;
 
   /** Dado un carácter, retorna su índice correspondiente en el arreglo next. */
   int getIndex(char c) {
@@ -49,7 +49,7 @@ private:
     Trie(Prioridad p = Prioridad::TIEMPO): prioridad(p), cantidadAccesos(0), cantidadNodos(0) {
       raiz = new Nodo();
       cantidadNodos++;
-      nodos.push_back(raiz);
+      //nodos.push_back(raiz);
     }
 
     /** Inserta la palabra w carácter por carácter. creando nodos cuando
@@ -62,9 +62,10 @@ private:
 
         if (actual->next[index] == nullptr) {
           Nodo* nuevo = new Nodo();
+          nuevo->parent = actual;
           actual->next[index] = nuevo;
           cantidadNodos++;
-          nodos.push_back(nuevo);
+          //nodos.push_back(nuevo);
         }
 
         actual = actual->next[index];
@@ -81,12 +82,12 @@ private:
 
         actual->next[lastIndex] = terminal;
         cantidadNodos++;
-        nodos.push_back(terminal);
+        //nodos.push_back(terminal);
 
         if (actual->bestTerminal == nullptr || actual->bestPriority < 0) {
           actual->bestTerminal = terminal;
           actual->bestPriority = 0;
-          update(terminal);
+          update_priority(terminal);
         }
       }
     }
@@ -124,4 +125,21 @@ private:
     const int getCantidadNodos() {
       return cantidadNodos;
     }
+/*
+    string bestWord(const string& s) {
+      Nodo *actual = raiz;
+      for (char c : s) {
+        int index = getIndex(c);
+
+        if (actual->next[index] == nullptr) {
+          Nodo* nuevo = new Nodo();
+          actual->next[index] = nuevo;
+          cantidadNodos++;
+          nodos.push_back(nuevo);
+        }
+
+        actual = actual->next[index];
+      }
+
+    }*/
 };
