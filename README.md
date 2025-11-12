@@ -10,5 +10,8 @@ g++ main.cpp -o main
 ./main
 ```
 
-Al ejecutar el programa, este generará 4 carpetas, una para cada dataset, donde dentro contendrá la información de
-los tiempos y la memoria, en archivos `.csv`.
+Al ejecutar el programa se generaran 2 directorios.
+
+El directorio `words/` donde se guardaran los resultados del experimento de memoria y de tiempo.
+
+Y el directorio `autocompletes/` donde se guardaran los resultados del experimento de autopompletado.
