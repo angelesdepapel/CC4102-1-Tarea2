@@ -104,7 +104,7 @@ private:
     Nodo* autocomplete(Nodo* v) {
       if (v == nullptr) return nullptr;
       return v->bestTerminal;
-    }
+    }                                                                                                                                           
 
     /** Actualiza la prioridad del nodo terminal v según la variante
      * y actualiza los nodos en el camino a la raíz. Esto último se realiza
@@ -124,6 +124,10 @@ private:
 
     const int getCantidadNodos() {
       return cantidadNodos;
+    }
+
+    Nodo *getRaiz() {
+      return raiz;
     }
 /*
     string bestWord(const string& s) {

@@ -29,8 +29,7 @@ long long contarCaracteres(const vector<string>& palabras, int hasta) {
   return total;
 }
 
-/** Arreglo de archivos del dataset a procesar */
-array<string, 4> archivos = {"words", "wikipedia", "random", "random_with_distribution"};
+
 
 int main(int argc, char* argv[]) {
   // Experimentacion memoria y tiempo 
@@ -128,7 +127,88 @@ int main(int argc, char* argv[]) {
   cout << "\nOK - Resultados guardados en words/Tiempo.csv" << endl;
 
   cout << "\n====================================" << endl;
-  cout << " EXPERIMENTOS COMPLETADOS DE MEMORIA Y TIEMPO " << endl;
+  cout << " Experimento 3: Análisis de autocompletado " << endl;
+  cout << "====================================" << endl;
+
+  /** Arreglo de archivos del dataset a procesar */
+  array<string, 3> archivos = {"wikipedia", "random", "random_with_distribution"};
+
+  //por cada archivo en los datasets
+  for (string archivo : archivos) {
+
+    //leemos el archivo a analizar
+    auto palabras = leerArchivo(archivo);
+
+    //creamos el csv donde guardaremos los datos
+    ofstream csvAutoCompleteTiempo(string("autocompletes/tiempo_" + archivo + ".csv"));
+    csvAutoCompleteTiempo << "NumPalabras,NumChar,UserChar,TiempoTotal,TiempoPorPalabra,TiempoPorChar\n";
+
+    //nuestro trie
+    Trie trie_tiempo = Trie(Prioridad::TIEMPO);
+
+    //poblamos nuestros tries con las palabras de words
+    for (string w : leerArchivo("datasets/words.txt")) {
+      trie_tiempo.insert(w);
+    }
+
+    long long L = 1 << 22; //palabras totales
+    long long char_usuario = 0; //chars escritos por el usuario
+    long long char_totales = 0; //chars totales
+    
+    for (int i ; i<L ; i++) { 
+      //para cada palabra w
+      std::string w = palabras[i];
+      //partimos por la raiz
+      Nodo *nodo_tiempo = trie_tiempo.getRaiz();
+
+      //guardamos cuantas letras contamos
+      int letras_contadas = 0;
+
+      //por cada caracter en w
+      for (char c : w) {
+        letras_contadas++; //acabamos de leer una
+
+        //bajamos por el trie
+        auto check_tiempo = trie_tiempo.descend(nodo_tiempo, c); 
+
+        //si la palabra no está en el trie
+        if (check_tiempo == nullptr) { 
+          //el usuario escribió toda la palabra
+          char_usuario += w.length();
+
+        //si la palabra está en el trie
+        } else {
+          //buscamos el mejor autocomplete
+          auto result = trie_tiempo.autocomplete(check_tiempo);
+
+          //si es la palabra que buscaba el usuario
+          if (*result->str == (w + "$")) {
+            //añadimos solo las que escribió el usuario
+            char_usuario += letras_contadas; 
+            //actualizamos la prio de esa palabra
+            trie_tiempo.update_priority(result);
+
+          } else {
+            //si no era la que buscaba, seguimos bajando
+            nodo_tiempo = check_tiempo;
+          }
+        }
+      }
+    }
+
+    /*Hay que hacer los rescates de datos para i y repetir para el arbol de accesos*/
+
+
+    
+
+  }
+  
+  //Trie trie_accesos = Trie(Prioridad::ACCESOS);
+
+
+  cout << "\n====================================" << endl;
+  cout << " EXPERIMENTOS COMPLETADOS " << endl;
   cout << "====================================\n" << endl;
   return 0;
+
 }
