@@ -141,10 +141,12 @@ int main(int argc, char* argv[]) {
   //por cada archivo en los datasets
   for (string archivo : archivos) {
 
+    cout << "\n====================================" << endl;
     //leemos el archivo a analizar
     cout << " Leyendo " << archivo << endl;
     auto palabras = leerArchivo("datasets/" + archivo + ".txt");
     cout << " Listo" << endl;
+    cout << "====================================" << endl;
 
     //creamos el csv donde guardaremos los datos
     ofstream csvAutoCompleteTiempo(string("autocompletes/tiempo_" + archivo + ".csv"));
@@ -241,6 +243,118 @@ int main(int argc, char* argv[]) {
     }
     csvAutoCompleteTiempo.close();
     cout << "\nOK - Resultados guardados en: " << "autocompletes/tiempo_" << archivo << ".csv" << endl;
+  }
+
+
+  cout << "\n====================================" << endl;
+  cout << " PRIORIDAD ACCESOS" << endl;
+  cout << "====================================" << endl;
+  //por cada archivo en los datasets
+  for (string archivo : archivos) {
+
+    cout << "\n====================================" << endl;
+    //leemos el archivo a analizar
+    cout << " Leyendo " << archivo << endl;
+    auto palabras = leerArchivo("datasets/" + archivo + ".txt");
+    cout << " Listo" << endl;
+    cout << "====================================" << endl;
+
+
+    //creamos el csv donde guardaremos los datos
+    ofstream csvAutoCompleteAccesos(string("autocompletes/accesos_" + archivo + ".csv"));
+    csvAutoCompleteAccesos << "NumPalabras,NumChar,UserChar,CharPorTotal,TiempoTotal,TiempoPorPalabra,TiempoPorChar\n";
+
+    //nuestro trie
+    Trie trie_accesos = Trie(Prioridad::ACCESOS);
+
+    //poblamos nuestros tries con las palabras de words
+    cout << " Poblando Trie" << endl;
+    for (string w : leerArchivo("datasets/words.txt")) {
+      trie_accesos.insert(w);
+    }
+    cout << " Trie poblado" << endl;
+
+    auto inicioAccesos = high_resolution_clock::now();
+    long long L = 1 << 22; //palabras totales
+    long long char_usuario = 0; //chars escritos por el usuario
+    long long char_totales = 0; //chars totales
+    long long exponente = 1; //para comparar con i
+    int medicion = 0; //para printear
+    
+    for (int i=0; i<L ; i++) {
+      //para cada palabra w
+      std::string w = palabras[i];
+      //partimos por la raiz
+      Nodo *nodo_accesos = trie_accesos.getRaiz();
+
+      //guardamos cuantas letras contamos
+      int letras_contadas = 0;
+
+      //por cada caracter en w
+      for (char c : w) {
+        letras_contadas++; //acabamos de escribir una
+
+        //bajamos por el trie
+        auto check_accesos = trie_accesos.descend(nodo_accesos, c); 
+        //si la palabra no está en el trie
+        if (check_accesos == nullptr) { 
+          //el usuario escribió toda la palabra
+          char_usuario += w.length();
+          break;
+
+        //si la palabra está en el trie
+        } else {
+          //buscamos el mejor autocomplete
+          Nodo *result = trie_accesos.autocomplete(check_accesos);
+          //si es la palabra que buscaba el usuario
+          if (*result->str == (w + "$")) {
+            //añadimos solo las que escribió el usuario
+            char_usuario += letras_contadas; 
+            //actualizamos la prio de esa palabra
+            trie_accesos.update_priority(result);
+            break;
+          } else {//si no era la que buscaba
+            //si terminamos de escribir la palabra
+            if (letras_contadas == w.length()) {
+              char_usuario += letras_contadas; //le sumamos toda la palabra
+              break;
+            } else { //si no seguimos bajando
+              nodo_accesos = check_accesos;
+            }
+          }
+        }
+      }
+      //contamos los caracteres totales
+      char_totales += w.length();
+
+      //cuando llegamos a uno de los puntos de medicion
+      if (i+1 == exponente) {
+        auto finAccesos = high_resolution_clock::now();
+        duration<double> tiempoTiempo = finAccesos-inicioAccesos;
+        double tiempoAccesosTotal = tiempoTiempo.count();
+        double tiempoAccesosPorPalabra = tiempoAccesosTotal/(i+1);
+        double tiempoAccesosPorChar = tiempoAccesosTotal/char_totales;
+        double porcentaje = (double)char_usuario/(double)char_totales;
+
+        cout << " i = 2^" << medicion << ":"<< endl;
+        cout << "  N° de palabras: " << i+1 << endl;
+        cout << "  N° de caracteres totales: " << char_totales << endl;
+        cout << "  N° de caracteres escritos: " << char_usuario << endl;
+        cout << "  caracteres escritos / carateres totales: " << porcentaje << endl;
+        cout << "  Tiempo total: " << tiempoAccesosTotal << endl;
+        cout << "  Tiempo por palabra: " << tiempoAccesosPorPalabra << endl;
+        cout << "  Tiempo por caracter: " << tiempoAccesosPorChar << endl;
+
+        csvAutoCompleteAccesos << (i+1) << "," << char_totales << ","
+          << char_usuario << "," << porcentaje << "," << tiempoAccesosTotal << ","
+          << tiempoAccesosPorPalabra << "," << tiempoAccesosPorChar << "\n";
+
+        exponente <<= 1; //*2
+        medicion++;
+      }
+    }
+    csvAutoCompleteAccesos.close();
+    cout << "\nOK - Resultados guardados en: " << "autocompletes/accesos_" << archivo << ".csv" << endl;
   }
 
 
