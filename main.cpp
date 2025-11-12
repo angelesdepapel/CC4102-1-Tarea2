@@ -133,11 +133,16 @@ int main(int argc, char* argv[]) {
   /** Arreglo de archivos del dataset a procesar */
   array<string, 3> archivos = {"wikipedia", "random", "random_with_distribution"};
 
+  cout << "\n====================================" << endl;
+  cout << " PRIORIDAD TIEMPO" << endl;
+  cout << "====================================" << endl;
   //por cada archivo en los datasets
   for (string archivo : archivos) {
 
     //leemos el archivo a analizar
-    auto palabras = leerArchivo(archivo);
+    cout << " Leyendo " << archivo << endl;
+    auto palabras = leerArchivo("datasets/" + archivo + ".txt");
+    cout << " Listo" << endl;
 
     //creamos el csv donde guardaremos los datos
     ofstream csvAutoCompleteTiempo(string("autocompletes/tiempo_" + archivo + ".csv"));
@@ -147,15 +152,20 @@ int main(int argc, char* argv[]) {
     Trie trie_tiempo = Trie(Prioridad::TIEMPO);
 
     //poblamos nuestros tries con las palabras de words
+    cout << " Poblando Trie" << endl;
     for (string w : leerArchivo("datasets/words.txt")) {
       trie_tiempo.insert(w);
     }
+    cout << " Trie poblado" << endl;
 
+    auto inicioTiempo = high_resolution_clock::now();
     long long L = 1 << 22; //palabras totales
     long long char_usuario = 0; //chars escritos por el usuario
     long long char_totales = 0; //chars totales
+    long long exponente = 1; //para comparar con i
+    int medicion = 0; //para printear
     
-    for (int i ; i<L ; i++) { 
+    for (int i=0; i<L ; i++) {
       //para cada palabra w
       std::string w = palabras[i];
       //partimos por la raiz
@@ -194,11 +204,48 @@ int main(int argc, char* argv[]) {
           }
         }
       }
+      if (i+1 == exponente) {
+        cout << " i = 2^" << medicion << endl;
+        exponente <<= 1; //*2
+        medicion++;
+      }
     }
+    csvTiempo.close();
+    cout << "\nOK - Resultados guardados en: " << "autocompletes/tiempo_" << archivo << ".csv" << endl;
 
     /*Hay que hacer los rescates de datos para i y repetir para el arbol de accesos*/
 
+  /*if (indiceMedicion < (int)puntosMedicion.size() && i + 1 == puntosMedicion[indiceMedicion]) {
+      long long totalChars = contarCaracteres(palabras, i + 1);
+      double nodosPorChar = (double)trie.getCantidadNodos() / totalChars;
 
+      csvMemoria << (i + 1) << "," << trie.getCantidadNodos() << ","
+        << totalChars << "," << nodosPorChar << "\n";
+
+      cout << "  N = 2^" << indiceMedicion << " (" << (i+1) << " palabras): "
+        << trie.getCantidadNodos() << " nodos, "
+        << fixed << setprecision(4) << nodosPorChar << " nodos/char" << endl;
+
+      indiceMedicion++;
+    }*/
+    /*if ((i + 1) % grupoSize == 0 || i + 1 == N) {
+      auto finGrupo = high_resolution_clock::now();
+      duration<double> tiempoGrupo = finGrupo - inicioGrupo;
+      double tiempoPorChar = tiempoGrupo.count() / charsGrupo;
+
+      csvTiempo << (i + 1) << "," << tiempoGrupo.count() << ","
+        << charsGrupo << "," << tiempoPorChar << "\n";
+
+      int grupoNum = (i + 1) / grupoSize;
+      if ((i + 1) % grupoSize != 0) grupoNum++;
+
+      cout << "  Grupo " << grupoNum << " (palabras " << (i + 1 - charsGrupo/6)
+        << "-" << (i+1) << "): " << fixed << setprecision(6) << tiempoGrupo.count()
+        << " s, " << tiempoPorChar << " s/char" << endl;
+
+      inicioGrupo = high_resolution_clock::now();
+      charsGrupo = 0;
+    }*/
     
 
   }
