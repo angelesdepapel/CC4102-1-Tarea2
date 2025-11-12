@@ -148,7 +148,7 @@ int main(int argc, char* argv[]) {
 
     //creamos el csv donde guardaremos los datos
     ofstream csvAutoCompleteTiempo(string("autocompletes/tiempo_" + archivo + ".csv"));
-    csvAutoCompleteTiempo << "NumPalabras,NumChar,UserChar,TiempoTotal,TiempoPorPalabra,TiempoPorChar\n";
+    csvAutoCompleteTiempo << "NumPalabras,NumChar,UserChar,CharPorTotal,TiempoTotal,TiempoPorPalabra,TiempoPorChar\n";
 
     //nuestro trie
     Trie trie_tiempo = Trie(Prioridad::TIEMPO);
@@ -212,21 +212,28 @@ int main(int argc, char* argv[]) {
       }
       //contamos los caracteres totales
       char_totales += w.length();
+
+      //cuando llegamos a uno de los puntos de medicion
       if (i+1 == exponente) {
         auto finTiempo = high_resolution_clock::now();
         duration<double> tiempoTiempo = finTiempo-inicioTiempo;
         double tiempoTiempoTotal = tiempoTiempo.count();
         double tiempoTiempoPorPalabra = tiempoTiempoTotal/(i+1);
         double tiempoTiempoPorChar = tiempoTiempoTotal/char_totales;
+        double porcentaje = (double)char_usuario/(double)char_totales;
 
         cout << " i = 2^" << medicion << ":"<< endl;
         cout << "  N° de palabras: " << i+1 << endl;
         cout << "  N° de caracteres totales: " << char_totales << endl;
         cout << "  N° de caracteres escritos: " << char_usuario << endl;
-        cout << "  caracteres escritos / carateres totales: " << (double)char_usuario/(double)char_totales << endl;
+        cout << "  caracteres escritos / carateres totales: " << porcentaje << endl;
         cout << "  Tiempo total: " << tiempoTiempoTotal << endl;
         cout << "  Tiempo por palabra: " << tiempoTiempoPorPalabra << endl;
         cout << "  Tiempo por caracter: " << tiempoTiempoPorChar << endl;
+
+        csvAutoCompleteTiempo << (i+1) << "," << char_totales << ","
+          << char_usuario << "," << porcentaje << "," << tiempoTiempoTotal << ","
+          << tiempoTiempoPorPalabra << "," << tiempoTiempoPorChar << "\n";
 
         exponente <<= 1; //*2
         medicion++;
@@ -234,46 +241,7 @@ int main(int argc, char* argv[]) {
     }
     csvAutoCompleteTiempo.close();
     cout << "\nOK - Resultados guardados en: " << "autocompletes/tiempo_" << archivo << ".csv" << endl;
-
-    /*Hay que hacer los rescates de datos para i y repetir para el arbol de accesos*/
-    //"NumPalabras,NumChar,UserChar,TiempoTotal,TiempoPorPalabra,TiempoPorChar\n"
-
-  /*if (indiceMedicion < (int)puntosMedicion.size() && i + 1 == puntosMedicion[indiceMedicion]) {
-      long long totalChars = contarCaracteres(palabras, i + 1);
-      double nodosPorChar = (double)trie.getCantidadNodos() / totalChars;
-
-      csvMemoria << (i + 1) << "," << trie.getCantidadNodos() << ","
-        << totalChars << "," << nodosPorChar << "\n";
-
-      cout << "  N = 2^" << indiceMedicion << " (" << (i+1) << " palabras): "
-        << trie.getCantidadNodos() << " nodos, "
-        << fixed << setprecision(4) << nodosPorChar << " nodos/char" << endl;
-
-      indiceMedicion++;
-    }*/
-    /*if ((i + 1) % grupoSize == 0 || i + 1 == N) {
-      auto finGrupo = high_resolution_clock::now();
-      duration<double> tiempoGrupo = finGrupo - inicioGrupo;
-      double tiempoPorChar = tiempoGrupo.count() / charsGrupo;
-
-      csvTiempo << (i + 1) << "," << tiempoGrupo.count() << ","
-        << charsGrupo << "," << tiempoPorChar << "\n";
-
-      int grupoNum = (i + 1) / grupoSize;
-      if ((i + 1) % grupoSize != 0) grupoNum++;
-
-      cout << "  Grupo " << grupoNum << " (palabras " << (i + 1 - charsGrupo/6)
-        << "-" << (i+1) << "): " << fixed << setprecision(6) << tiempoGrupo.count()
-        << " s, " << tiempoPorChar << " s/char" << endl;
-
-      inicioGrupo = high_resolution_clock::now();
-      charsGrupo = 0;
-    }*/
-    
-
   }
-  
-  //Trie trie_accesos = Trie(Prioridad::ACCESOS);
 
 
   cout << "\n====================================" << endl;
