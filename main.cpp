@@ -130,6 +130,8 @@ int main(int argc, char* argv[]) {
   cout << " Experimento 3: Análisis de autocompletado " << endl;
   cout << "====================================" << endl;
 
+  filesystem::create_directories("autocompletes");
+
   /** Arreglo de archivos del dataset a procesar */
   array<string, 3> archivos = {"wikipedia", "random", "random_with_distribution"};
 
@@ -176,44 +178,65 @@ int main(int argc, char* argv[]) {
 
       //por cada caracter en w
       for (char c : w) {
-        letras_contadas++; //acabamos de leer una
+        letras_contadas++; //acabamos de escribir una
 
         //bajamos por el trie
         auto check_tiempo = trie_tiempo.descend(nodo_tiempo, c); 
-
         //si la palabra no está en el trie
         if (check_tiempo == nullptr) { 
           //el usuario escribió toda la palabra
           char_usuario += w.length();
+          break;
 
         //si la palabra está en el trie
         } else {
           //buscamos el mejor autocomplete
-          auto result = trie_tiempo.autocomplete(check_tiempo);
-
+          Nodo *result = trie_tiempo.autocomplete(check_tiempo);
           //si es la palabra que buscaba el usuario
           if (*result->str == (w + "$")) {
             //añadimos solo las que escribió el usuario
             char_usuario += letras_contadas; 
             //actualizamos la prio de esa palabra
             trie_tiempo.update_priority(result);
-
-          } else {
-            //si no era la que buscaba, seguimos bajando
-            nodo_tiempo = check_tiempo;
+            break;
+          } else {//si no era la que buscaba
+            //si terminamos de escribir la palabra
+            if (letras_contadas == w.length()) {
+              char_usuario += letras_contadas; //le sumamos toda la palabra
+              break;
+            } else { //si no seguimos bajando
+              nodo_tiempo = check_tiempo;
+            }
           }
         }
       }
+      //contamos los caracteres totales
+      char_totales += w.length();
       if (i+1 == exponente) {
-        cout << " i = 2^" << medicion << endl;
+        auto finTiempo = high_resolution_clock::now();
+        duration<double> tiempoTiempo = finTiempo-inicioTiempo;
+        double tiempoTiempoTotal = tiempoTiempo.count();
+        double tiempoTiempoPorPalabra = tiempoTiempoTotal/(i+1);
+        double tiempoTiempoPorChar = tiempoTiempoTotal/char_totales;
+
+        cout << " i = 2^" << medicion << ":"<< endl;
+        cout << "  N° de palabras: " << i+1 << endl;
+        cout << "  N° de caracteres totales: " << char_totales << endl;
+        cout << "  N° de caracteres escritos: " << char_usuario << endl;
+        cout << "  caracteres escritos / carateres totales: " << (double)char_usuario/(double)char_totales << endl;
+        cout << "  Tiempo total: " << tiempoTiempoTotal << endl;
+        cout << "  Tiempo por palabra: " << tiempoTiempoPorPalabra << endl;
+        cout << "  Tiempo por caracter: " << tiempoTiempoPorChar << endl;
+
         exponente <<= 1; //*2
         medicion++;
       }
     }
-    csvTiempo.close();
+    csvAutoCompleteTiempo.close();
     cout << "\nOK - Resultados guardados en: " << "autocompletes/tiempo_" << archivo << ".csv" << endl;
 
     /*Hay que hacer los rescates de datos para i y repetir para el arbol de accesos*/
+    //"NumPalabras,NumChar,UserChar,TiempoTotal,TiempoPorPalabra,TiempoPorChar\n"
 
   /*if (indiceMedicion < (int)puntosMedicion.size() && i + 1 == puntosMedicion[indiceMedicion]) {
       long long totalChars = contarCaracteres(palabras, i + 1);
